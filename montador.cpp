@@ -56,6 +56,27 @@ std::vector<std::string> splitString(const std::string& input) {
     return tokens;
 }
 
+std::vector<std::string> splitStringAdd(const std::string& input) {
+    std::vector<std::string> tokens;
+    std::string token;
+    
+    for (char c : input) {
+        if (c == '+') {
+            if (!token.empty()) {
+                tokens.push_back(token);
+                token.clear();
+            }
+        } else {
+            token += c;
+        }
+    }
+    
+    if (!token.empty()) {
+        tokens.push_back(token);
+    }
+    
+    return tokens;
+}
 
 int main() {
     std::set<std::string> instructionSet = {"CONST","SPACE","LOAD", "STORE", "ADD", "SUB", "MUL", "DIV", "INPUT", "OUTPUT", "JMPP", "JMPZ", "STOP","COPY"};
@@ -139,6 +160,17 @@ int main() {
             idx +=1;
         }
         else if(token.compare("SPACE") == 0){
+            std::vector<std::string> teste = splitString(line);
+
+            std::cout<<"teste "<< teste.size() <<std::endl;
+
+            if(teste.size()>2){
+                for(int i=1;i<std::stoi(teste[2]);i++){
+                    tabelaDeDados[idx]=0;
+                    idx++;
+                }
+            }
+
             tabelaDeDados[idx]=0;
             idx +=1;
         }
@@ -174,7 +206,6 @@ int main() {
     }
 
     int enderecoDados = lc;
-    // int oldLc = -1;
     std::cout << "-----TOKENS-----" << std::endl;
     for (const std::string& token : tokens_data) {
         if(!isInstruction(token,instructionSet)){
@@ -182,42 +213,12 @@ int main() {
             tabelaDeSimbolos[token]=lc;
             lc++;
         }
-
-
-
-        // else{
-        //     std::cout << token << std::endl;
-
-        // }
-        // if(token == "CONST"){
-        //     std::cout<< "CONST" <<std::endl;
-        //     oldLc = lc;
-        // }
-
-        // if(oldLc != -1){
-        //     std::cout<< "CONST value " << token << std::endl;
-
-        //     tabelaDeDados[oldLc]=std::stoi(token);
-        //     oldLc=-1;
-        // }
     }
 
     std::cout<<"----tabela de simbolos----"<<std::endl;
     for (const auto& par : tabelaDeSimbolos) {
         std::cout << "Chave: " << par.first << ", Valor: " << par.second << std::endl;
     }
-
-    // std::cout << "-----TOKENS-----" << std::endl;
-    // for (const std::string& token : tokens_text) {
-    //     if(isInstruction(token,instructionSet)){
-    //         lc += getTamanhoInstrucao(token)
-    //         std::cout << token << std::endl;
-    //     }else{
-    //         lc += getTamanhoInstrucao(token)
-    //     }
-    // }
-
-
 
     std::string strObj = "";
     int op1 =0;
@@ -228,10 +229,10 @@ int main() {
     std::cout<<"----cod obj----"<<std::endl;
 
     for (const std::string& line : text_section_lines) {
-        // std::cout << line << std::endl;
 
         std::istringstream iss(line);
         std::string token;
+        std::vector<std::string> labelComposto;
 
         while (iss >> token) {
             if(token.find(":") != std::string::npos){ //eh label
@@ -242,16 +243,31 @@ int main() {
                 iss>>token;
                 operandosCopy = splitString(token);
 
-                op1=tabelaDeSimbolos[operandosCopy[0]+":"];
+                labelComposto = splitStringAdd(operandosCopy[0]);
+                op1=tabelaDeSimbolos[labelComposto[0]+":"];
+                if(labelComposto.size()>1){
+                    op1+= std::stoi(labelComposto[1]);
+                }
 
-                op2=tabelaDeSimbolos[operandosCopy[1]+":"];
+                labelComposto = splitStringAdd(operandosCopy[1]);
+                op2=tabelaDeSimbolos[labelComposto[0]+":"];
+                if(labelComposto.size()>1){
+                    op2+= std::stoi(labelComposto[1]);
+                }
 
                 strObj += std::to_string(code) + " " + std::to_string(op1) + " " + std::to_string(op2) + " ";
             }else if(code == 14){
                 strObj += std::to_string(code) + " ";
             }else{
                 iss>>token;
-                op1=tabelaDeSimbolos[token+":"];
+
+                labelComposto = splitStringAdd(token);
+
+                op1=tabelaDeSimbolos[labelComposto[0]+":"];
+
+                if(labelComposto.size()>1){
+                    op1+= std::stoi(labelComposto[1]);
+                }
 
                 strObj += std::to_string(code) + " " + std::to_string(op1) + " ";
             }
