@@ -10,6 +10,10 @@ bool isInstruction(const std::string& token, const std::set<std::string>& instru
     return instructionSet.find(token) != instructionSet.end();
 }
 
+bool isDirective(const std::string& token, const std::set<std::string>& directiveSet) {
+    return directiveSet.find(token) != directiveSet.end();
+}
+
 int getTamanhoInstrucao(const std::string& instrucao){
     if(instrucao == "COPY"){
         return 3;
@@ -29,11 +33,37 @@ int getInstructionValue(const std::string& instruction, const std::map<std::stri
     }
 }
 
+// Função para dividir uma string com base em espaços e vírgulas
+std::vector<std::string> splitString(const std::string& input) {
+    std::vector<std::string> tokens;
+    std::string token;
+    
+    for (char c : input) {
+        if (c == ' ' || c == ',') {
+            if (!token.empty()) {
+                tokens.push_back(token);
+                token.clear();
+            }
+        } else {
+            token += c;
+        }
+    }
+    
+    if (!token.empty()) {
+        tokens.push_back(token);
+    }
+    
+    return tokens;
+}
+
 
 int main() {
-    std::set<std::string> instructionSet = {"CONST","SPACE","LOAD", "STORE", "ADD", "SUB", "MUL", "DIV", "INPUT", "OUTPUT", "JMPP", "JMPZ", "STOP"};
+    std::set<std::string> instructionSet = {"CONST","SPACE","LOAD", "STORE", "ADD", "SUB", "MUL", "DIV", "INPUT", "OUTPUT", "JMPP", "JMPZ", "STOP","COPY"};
+    std::set<std::string> directiveSet = {"CONST","SPACE"};
     std::map<std::string, int> instructionMap;
+    std::map<int, int> tabelaDeDados;
     int code;
+    int lc = 0;
 
     instructionMap["ADD"] = 1;
     instructionMap["SUB"] = 2;
@@ -87,6 +117,7 @@ int main() {
 
     std::vector<std::string> tokens_data;
     std::cout << "Linhas da SECAO DATA:" << std::endl;
+    int idx = 0;
     for (const std::string& line : data_section_lines) {
         std::cout << line << std::endl;
 
@@ -96,17 +127,24 @@ int main() {
         iss >> token;
 
         tokens_data.push_back(token);
+
+        iss>>token;
+
+        std::cout<<"identificador const/space " << token << std::endl;
+        
+        if(token.compare("CONST") == 0){
+            iss>>token;
+            std::cout<<"valor const " << token << std::endl;
+            tabelaDeDados[idx] = std::stoi(token);
+            idx +=1;
+        }
+        else if(token.compare("SPACE") == 0){
+            tabelaDeDados[idx]=0;
+            idx +=1;
+        }
+        
     }
 
-    std::cout << "-----TOKENS-----" << std::endl;
-    int lc = 0;
-    for (const std::string& line : tokens_data) {
-        if(!isInstruction(line,instructionSet)){
-            std::cout << line << std::endl;
-            tabelaDeSimbolos[line]=lc;
-            lc++;
-        }
-    }
 
     for (const auto& par : tabelaDeSimbolos) {
         std::cout << "Chave: " << par.first << ", Valor: " << par.second << std::endl;
@@ -125,8 +163,8 @@ int main() {
             if(token.find(":") != std::string::npos){ //eh label
                 std::string label = token;
                 iss>>token;
-                lc+=getTamanhoInstrucao(token);
                 tabelaDeSimbolos[label]=lc;
+                lc+=getTamanhoInstrucao(token);
                 break;
             }else{
                 lc+=getTamanhoInstrucao(token);
@@ -135,6 +173,34 @@ int main() {
         }
     }
 
+    int enderecoDados = lc;
+    // int oldLc = -1;
+    std::cout << "-----TOKENS-----" << std::endl;
+    for (const std::string& token : tokens_data) {
+        if(!isInstruction(token,instructionSet)){
+            std::cout << token << std::endl;
+            tabelaDeSimbolos[token]=lc;
+            lc++;
+        }
+
+
+
+        // else{
+        //     std::cout << token << std::endl;
+
+        // }
+        // if(token == "CONST"){
+        //     std::cout<< "CONST" <<std::endl;
+        //     oldLc = lc;
+        // }
+
+        // if(oldLc != -1){
+        //     std::cout<< "CONST value " << token << std::endl;
+
+        //     tabelaDeDados[oldLc]=std::stoi(token);
+        //     oldLc=-1;
+        // }
+    }
 
     std::cout<<"----tabela de simbolos----"<<std::endl;
     for (const auto& par : tabelaDeSimbolos) {
@@ -155,7 +221,8 @@ int main() {
 
     std::string strObj = "";
     int op1 =0;
-    int op2 =0;
+    int op2 = 0;
+    std::vector<std::string> operandosCopy;
 
 
     std::cout<<"----cod obj----"<<std::endl;
@@ -173,24 +240,36 @@ int main() {
             code = getInstructionValue(token,instructionMap);
             if(code == 9){
                 iss>>token;
-                op1=tabelaDeSimbolos[token+":"];
+                operandosCopy = splitString(token);
 
-                iss>>token;
-                op2=tabelaDeSimbolos[token+":"];
-                strObj = std::to_string(code) + " " + std::to_string(op1) + " " + std::to_string(op2);
+                op1=tabelaDeSimbolos[operandosCopy[0]+":"];
+
+                op2=tabelaDeSimbolos[operandosCopy[1]+":"];
+
+                strObj += std::to_string(code) + " " + std::to_string(op1) + " " + std::to_string(op2) + " ";
             }else if(code == 14){
-                strObj = std::to_string(code) + " ";
+                strObj += std::to_string(code) + " ";
             }else{
                 iss>>token;
                 op1=tabelaDeSimbolos[token+":"];
 
-                strObj = std::to_string(code) + " " + std::to_string(op1) + " ";
+                strObj += std::to_string(code) + " " + std::to_string(op1) + " ";
             }
             break;
         }
 
-        std::cout<<strObj<<std::endl;
+        // std::cout<<strObj<<std::endl;
     }
+
+
+    std::cout<<"----tabela de dados----"<<std::endl;
+    for (const auto& par : tabelaDeDados) {
+        strObj += std::to_string(par.second) + " ";
+        std::cout << "Chave: " << par.first + enderecoDados << ", Valor: " << par.second << std::endl;
+    }
+
+    std::cout<<strObj<<std::endl;
+
 
     return 0;
 }
