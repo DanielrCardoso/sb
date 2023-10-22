@@ -81,7 +81,7 @@ bool analisadorSintatico(std::string line,std::set<std::string> instructionSet){
     }
 
     if(!isInstruction(token,instructionSet)){
-        std::cout << "ERRO SINTATICO: A instrucao: '" << token << "' nao esta definida na tabela de diretivas da ilnguagem."<<std::endl;
+        std::cout << "ERRO SINTATICO: A instrucao: '" << token << "' nao esta definida na tabela de diretivas da linguagem."<<std::endl;
         return false;
     }
 
@@ -171,6 +171,7 @@ int main() {
 
     std::string linha;
     int numerolinha = 0;
+    bool comprometido = false;
     // Leitura do arquivo de entrada e separação das linhas em seções.
     for (const std::string& linha : assemblyLines) {
         numerolinha ++;
@@ -188,12 +189,16 @@ int main() {
             data_section_lines.push_back(linha);
         } else if (in_text_section) {
             if(!analisadorSintatico(linha,instructionSet)){
-                std::cout << "ERRO na linha "<< numerolinha << ": " << linha << std::endl;
-                exit(0);
+                std::cout << "ERRO na linha "<< numerolinha << ": " << linha << std::endl << std::endl;
+                comprometido = true;
             }
             text_section_lines.push_back(linha);
         }
 
+    }
+
+    if(comprometido){
+        exit(0);
     }
 
     std::vector<std::string> tokens_data;
