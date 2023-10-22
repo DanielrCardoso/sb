@@ -279,10 +279,10 @@ int main() {
     }
 
     std::vector<std::string> tokens_data;
-    std::cout << "Linhas da SECAO DATA:" << std::endl;
+    // std::cout << "Linhas da SECAO DATA:" << std::endl;
     int idx = 0;
     for (const std::string& line : data_section_lines) {
-        std::cout << line << std::endl;
+        // std::cout << line << std::endl;
 
         std::istringstream iss(line);
         std::string token;
@@ -293,18 +293,18 @@ int main() {
 
         iss>>token;
 
-        std::cout<<"identificador const/space " << token << std::endl;
+        // std::cout<<"identificador const/space " << token << std::endl;
         
         if(token.compare("CONST") == 0){
             iss>>token;
-            std::cout<<"valor const " << token << std::endl;
+            // std::cout<<"valor const " << token << std::endl;
             tabelaDeDados[idx] = std::stoi(token);
             idx +=1;
         }
         else if(token.compare("SPACE") == 0){
             std::vector<std::string> teste = splitString(line," ,");
 
-            std::cout<<"teste "<< teste.size() <<std::endl;
+            // std::cout<<"teste "<< teste.size() <<std::endl;
 
             if(teste.size()>2){
                 for(int i=1;i<std::stoi(teste[2]);i++){
@@ -319,14 +319,16 @@ int main() {
         
     }
 
-    for (const auto& par : tabelaDeSimbolos) {
-        std::cout << "Chave: " << par.first << ", Valor: " << par.second << std::endl;
-    }
+    // for (const auto& par : tabelaDeSimbolos) {
+    //     std::cout << "Chave: " << par.first << ", Valor: " << par.second << std::endl;
+    // }
 
     std::vector<std::string> tokens_text;
-    std::cout << "\nLinhas da SECAO TEXT:" << std::endl;
+    int countDataLines = 1;
+    // std::cout << "\nLinhas da SECAO TEXT:" << std::endl;
     for (const std::string& line : text_section_lines) {
-        std::cout << line << std::endl;
+        countDataLines++;
+        // std::cout << line << std::endl;
 
         std::istringstream iss(line);
         std::string token;
@@ -334,6 +336,12 @@ int main() {
         while (iss >> token) {
             if(token.find(":") != std::string::npos){ //eh label
                 std::string label = token;
+                if(tabelaDeSimbolos.find(label) != tabelaDeSimbolos.end()){
+                                        std::cout<<"ERRO na linha " << countDataLines<< " : "  << line << std::endl;
+
+                    std::cout<<"ERRO SEMANTICO: Declaracao de label duplicada: "<<label << std::endl; 
+                    exit(0);
+                }
                 iss>>token;
                 tabelaDeSimbolos[label]=lc;
                 lc+=getTamanhoInstrucao(token);
@@ -345,20 +353,27 @@ int main() {
         }
     }
 
+    int idxData = 1;
     int enderecoDados = lc;
-    std::cout << "-----TOKENS-----" << std::endl;
+    // std::cout << "-----TOKENS-----" << std::endl;
     for (const std::string& token : tokens_data) {
+        idxData++;
         if(!isInstruction(token,instructionSet)){
-            std::cout << token << std::endl;
+            // std::cout << token << std::endl;
+            if(tabelaDeSimbolos.find(token) != tabelaDeSimbolos.end()){
+                std::cout<<"ERRO na linha " << idxData << std::endl;
+                std::cout<<"ERRO SEMANTICO: Declaracao de label duplicada: "<<token << std::endl; 
+                exit(0);
+            }
             tabelaDeSimbolos[token]=lc;
             lc++;
         }
     }
 
-    std::cout<<"----tabela de simbolos----"<<std::endl;
-    for (const auto& par : tabelaDeSimbolos) {
-        std::cout << "Chave: " << par.first << ", Valor: " << par.second << std::endl;
-    }
+    // std::cout<<"----tabela de simbolos----"<<std::endl;
+    // for (const auto& par : tabelaDeSimbolos) {
+    //     std::cout << "Chave: " << par.first << ", Valor: " << par.second << std::endl;
+    // }
 
     std::string strObj = "";
     int op1 =0;
@@ -366,9 +381,11 @@ int main() {
     std::vector<std::string> operandosCopy;
 
 
-    std::cout<<"----cod obj----"<<std::endl;
+    // std::cout<<"----cod obj----"<<std::endl;
 
+    int countTextLines = 1;
     for (const std::string& line : text_section_lines) {
+        countTextLines++;
 
         std::istringstream iss(line);
         std::string token;
@@ -380,16 +397,40 @@ int main() {
             }
             code = getInstructionValue(token,instructionMap);
             if(code == 9){
+                std::cout<<"entrou no copy"<<std::endl;
+
                 iss>>token;
                 operandosCopy = splitString(token," ,");
 
                 labelComposto = splitString(operandosCopy[0],"+");
+
+                // std::cout<<labelComposto[1]<<std::endl;
+
+
+                if(!(tabelaDeSimbolos.find(labelComposto[0]+':') != tabelaDeSimbolos.end())){
+                                    std::cout<<labelComposto[0]<<std::endl;
+
+                    std::cout<<"ERRO na linha " << countTextLines<< " : "  << line << std::endl;
+                    std::cout<<"ERRO SEMANTICO: Declaracao de label duplicada: "<<labelComposto[0] << std::endl; 
+                    exit(0);
+                }
+
                 op1=tabelaDeSimbolos[labelComposto[0]+":"];
                 if(labelComposto.size()>1){
                     op1+= std::stoi(labelComposto[1]);
                 }
 
                 labelComposto = splitString(operandosCopy[1],"+");
+
+                if(!(tabelaDeSimbolos.find(labelComposto[0]+':') != tabelaDeSimbolos.end())){
+                                    std::cout<<labelComposto[0]<<std::endl;
+                    std::cout<<"ERRO na linha " << countTextLines<< " : "  << line << std::endl;
+
+                    std::cout<<"ERRO SEMANTICO: Declaracao de label duplicada: "<<labelComposto[0] << std::endl; 
+                    exit(0);
+                }
+
+
                 op2=tabelaDeSimbolos[labelComposto[0]+":"];
                 if(labelComposto.size()>1){
                     op2+= std::stoi(labelComposto[1]);
@@ -397,11 +438,22 @@ int main() {
 
                 strObj += std::to_string(code) + " " + std::to_string(op1) + " " + std::to_string(op2) + " ";
             }else if(code == 14){
+                                std::cout<<"entrou no stop"<<std::endl;
+
                 strObj += std::to_string(code) + " ";
             }else{
+                                std::cout<<"entrou no geral " << code <<std::endl;
+
                 iss>>token;
 
                 labelComposto = splitString(token,"+");
+
+                if(!(tabelaDeSimbolos.find(labelComposto[0]+':') != tabelaDeSimbolos.end())){
+                                        std::cout<<"ERRO na linha " << countTextLines<< " : "  << line << std::endl;
+
+                    std::cout<<"ERRO SEMANTICO: Label não declarada: "<<labelComposto[0] << std::endl; 
+                    exit(0);
+                }
 
                 op1=tabelaDeSimbolos[labelComposto[0]+":"];
 
@@ -417,11 +469,11 @@ int main() {
         // std::cout<<strObj<<std::endl;
     }
 
-    std::cout<<"----tabela de dados----"<<std::endl;
-    for (const auto& par : tabelaDeDados) {
-        strObj += std::to_string(par.second) + " ";
-        std::cout << "Chave: " << par.first + enderecoDados << ", Valor: " << par.second << std::endl;
-    }
+    // std::cout<<"----tabela de dados----"<<std::endl;
+    // for (const auto& par : tabelaDeDados) {
+    //     strObj += std::to_string(par.second) + " ";
+    //     std::cout << "Chave: " << par.first + enderecoDados << ", Valor: " << par.second << std::endl;
+    // }
 
     std::cout<<strObj<<std::endl;
 
