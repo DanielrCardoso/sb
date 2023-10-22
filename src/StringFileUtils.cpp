@@ -35,3 +35,12 @@ std::vector<std::string> readFile(const std::string& filename) {
 
     return lines;
 }
+
+
+// bool isLetterOrUnderscore(char c) {
+//     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+// }
+
+// bool isDigit(char c) {
+//     return (c >= '0' && c <= '9');
+// }

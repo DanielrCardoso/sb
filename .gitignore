@@ -13,3 +13,6 @@
 # Arquivos e diretórios de compilação
 /bin/
 /lib/
+
+.vscode/
+.vscode/settings.json

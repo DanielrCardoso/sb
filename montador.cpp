@@ -6,6 +6,7 @@
 #include <set>
 #include <map>
 #include <cctype>
+#include <regex>
 
 #include "InstructionsUtils.h"
 #include "StringFilesUtils.h"
@@ -14,7 +15,9 @@ bool isLetterOrUnderscore(char c) {
     return isalpha(c) || c == '_';
 }
 
-bool validaRegraLabel(std::string token,std::set<std::string> instructionSet){
+std::regex espacoRegex("\\s");
+
+bool analisadorLexico(std::string token,std::set<std::string> instructionSet){
 
     if (token.back() == ':') token.pop_back();
 
@@ -30,6 +33,94 @@ bool validaRegraLabel(std::string token,std::set<std::string> instructionSet){
     }
 
     return true;
+}
+
+
+bool analisadorLabels(const std::string& token, const std::set<std::string>& instructionSet) {
+    if (token.empty()) return false;
+    
+    size_t plusPos = token.find("+");
+    
+    if (plusPos != std::string::npos) {
+        // Se encontramos um "+", dividimos a string em duas partes
+        std::string part1 = token.substr(0, plusPos);
+        std::string part2 = token.substr(plusPos + 1);
+
+        if (part1.empty() || part2.empty()) return false;
+        
+        if (!isLetterOrUnderscore(part1[0]) || isInstruction(part1, instructionSet)) return false;
+        if (!isdigit(part2[0]) && !isInstruction(part2, instructionSet)) return false;
+    } else {
+        // Se não houver um "+", verificamos a string inteira da mesma maneira
+        if (!isLetterOrUnderscore(token[0]) || isInstruction(token, instructionSet)) return false;
+    }
+
+    return true;
+}
+
+bool analisadorSintatico(std::string line,std::set<std::string> instructionSet){
+    std::istringstream iss(line);
+    std::string token;
+    std::string parametro;
+
+    iss >> token;
+
+    if(!isInstruction(token,instructionSet)){ // eh simbolo
+        if(token.find(":") != std::string::npos){ //eh label
+            if(!analisadorLexico(token,instructionSet)){
+                std::cout << "ERRO LEXICO: erro na declaracao da label: '" << token << "'"<<std::endl;
+                exit(0);
+            }
+            iss >> token;
+        }else{
+            std::cout << "ERRO SINTATICO: erro no token: '" << token << "'"<<std::endl;
+            exit(0);
+        }
+    }
+
+    if(!isInstruction(token,instructionSet)){
+        std::cout << "ERRO SINTATICO: A instrucao: '" << token << "' nao esta definida na tabela de diretivas da ilnguagem."<<std::endl;
+        exit(0);
+    }
+
+    if(token != "STOP"){
+
+        iss >> parametro;
+
+        std::cout<< "OP "<< token << " param "<< parametro << std::endl;
+
+        if(token != "COPY"){
+            // return true;
+            if(!analisadorLabels(parametro,instructionSet)){
+                std::cout << "ERRO SINTATICO: Os parametros da funcao nao seguem as regras de declaracao."<<std::endl;
+                exit(0);           
+            }
+
+        }
+        else{
+        std::vector<std::string> operandos = splitString(parametro,",");
+        if(operandos.size()<2){
+                std::cout << "ERRO SINTATICO: A instrucao COPY deve receber dois parametros."<<std::endl;
+                exit(0);
+        }
+        for(auto x : operandos){
+                if(std::regex_search(x, espacoRegex)){
+                    std::cout << "ERRO SINTATICO: Os parametros da funcao COPY nao devem conter espacos."<<std::endl;
+                    exit(0);
+                }
+
+                if(!analisadorLabels(x,instructionSet)){
+                    std::cout << "ERRO SINTATICO: Os parametros da funcao COPY nao seguem as regras de declaracao."<<std::endl;
+                    exit(0);
+                }
+
+        }
+        }
+
+    }
+
+    return true;
+    
 }
 
 int main() {
@@ -82,6 +173,7 @@ int main() {
         if (in_data_section) {
             data_section_lines.push_back(linha);
         } else if (in_text_section) {
+            analisadorSintatico(linha,instructionSet);
             text_section_lines.push_back(linha);
         }
     }
@@ -157,14 +249,9 @@ int main() {
     std::cout << "-----TOKENS-----" << std::endl;
     for (const std::string& token : tokens_data) {
         if(!isInstruction(token,instructionSet)){
-            if(validaRegraLabel(token,instructionSet)){
-                std::cout << token << std::endl;
-                tabelaDeSimbolos[token]=lc;
-                lc++;
-            }else{
-                std::cout << "ERRO LEXICO: erro na declaracao da label: '" << token << "'"<<std::endl;
-                exit(0);
-            }
+            std::cout << token << std::endl;
+            tabelaDeSimbolos[token]=lc;
+            lc++;
         }
     }
 
@@ -189,13 +276,7 @@ int main() {
 
         while (iss >> token) {
             if(token.find(":") != std::string::npos){ //eh label
-                if(validaRegraLabel(token,instructionSet)){
-                    iss>>token;
-                }
-                else{
-                    std::cout << "ERRO LEXICO: erro na declaracao da label: '" << token << "'"<<std::endl;
-                    exit(0);
-                }
+                iss>>token;
             }
             code = getInstructionValue(token,instructionMap);
             if(code == 9){
