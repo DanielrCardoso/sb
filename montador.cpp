@@ -58,7 +58,80 @@ bool analisadorLabels(const std::string& token, const std::set<std::string>& ins
     return true;
 }
 
-bool analisadorSintatico(std::string line,std::set<std::string> instructionSet){
+bool contemApenasNumeros(const std::string& str) {
+    for (char caractere : str) {
+        if (!std::isdigit(caractere)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool analisadorSintaticoSecData(std::string line,std::set<std::string> instructionSet,std::set<std::string> directiveSet){
+    std::istringstream iss(line);
+    std::string token;
+    std::string parametro;
+
+    iss >> token;
+    int quantidadeArgs = splitString(line," ").size();
+    quantidadeArgs--;
+
+    if(!isInstruction(token,instructionSet)){ // eh simbolo
+        if(token.find(":") != std::string::npos){ //eh label
+            if(!analisadorLexico(token,instructionSet)){
+                std::cout << "ERRO LEXICO: erro na declaracao da label: '" << token << "'"<<std::endl;
+                return false;
+            }
+            iss >> token;
+        }else{
+            std::cout << "ERRO SINTATICO: erro no token: '" << token << "'"<<std::endl;
+            return false;
+        }
+    }else{
+        std::cout << "ERRO SINTATICO: Nao e possivel utilizar : '" << token << "' como declaracao de variavel"<<std::endl;
+        return false;
+    }
+
+    if(!isDirective(token, directiveSet)){
+        std::cout << "ERRO SINTATICO: A instrucao : '" << token << "' nao e valida para a secao DATA."<<std::endl;
+        return false;
+    }
+
+    // std::cout<<"fora dos args: "<< token << std::endl;
+
+    if(token == "CONST"){
+        quantidadeArgs--;
+
+        // std::cout<< line << " " << quantidadeArgs << std::endl;
+        if(quantidadeArgs != 1){
+            std::cout << "ERRO SINTATICO: A direiva CONST exige UM argumento." <<std::endl;
+            return false;
+        }
+
+    }else if(token == "SPACE"){
+        quantidadeArgs--;
+
+        // std::cout<< line << " " << quantidadeArgs << std::endl;
+
+        if(quantidadeArgs >1){
+            std::cout << "ERRO SINTATICO: A direiva SPACE aceita no maximo UM argumento." <<std::endl;
+            return false;
+        }
+    }
+
+    iss >> token;
+
+    
+    if(!contemApenasNumeros(token)){
+        std::cout << "ERRO SINTATICO: argumento invalido." <<std::endl;
+        return false;
+    }
+
+
+    return true;
+}
+
+bool analisadorSintaticoSecText(std::string line,std::set<std::string> instructionSet){
     std::istringstream iss(line);
     std::string token;
     std::string parametro;
@@ -186,9 +259,14 @@ int main() {
         }
 
         if (in_data_section) {
+            if(!analisadorSintaticoSecData(linha,instructionSet,directiveSet)){
+                std::cout << "ERRO na linha "<< numerolinha << ": " << linha << std::endl << std::endl;
+                comprometido = true;
+            }
             data_section_lines.push_back(linha);
+ 
         } else if (in_text_section) {
-            if(!analisadorSintatico(linha,instructionSet)){
+            if(!analisadorSintaticoSecText(linha,instructionSet)){
                 std::cout << "ERRO na linha "<< numerolinha << ": " << linha << std::endl << std::endl;
                 comprometido = true;
             }
