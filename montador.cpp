@@ -5,9 +5,32 @@
 #include <sstream>
 #include <set>
 #include <map>
+#include <cctype>
 
 #include "InstructionsUtils.h"
 #include "StringFilesUtils.h"
+
+bool isLetterOrUnderscore(char c) {
+    return isalpha(c) || c == '_';
+}
+
+bool validaRegraLabel(std::string token,std::set<std::string> instructionSet){
+
+    if (token.back() == ':') token.pop_back();
+
+    if (token.empty()) return false;
+    if (!isLetterOrUnderscore(token[0])) return false;
+    if (isInstruction(token,instructionSet)) return false;
+
+    // Verifica os caracteres restantes.
+    for (char c : token) {
+        if (!isLetterOrUnderscore(c) && !isdigit(c)) {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 int main() {
     std::set<std::string> instructionSet = {"CONST","SPACE","LOAD", "STORE", "ADD", "SUB", "MUL", "DIV", "INPUT", "OUTPUT", "JMPP", "JMPZ", "STOP","COPY"};
@@ -73,7 +96,7 @@ int main() {
         std::string token;
 
         iss >> token;
-
+      
         tokens_data.push_back(token);
 
         iss>>token;
@@ -134,9 +157,14 @@ int main() {
     std::cout << "-----TOKENS-----" << std::endl;
     for (const std::string& token : tokens_data) {
         if(!isInstruction(token,instructionSet)){
-            std::cout << token << std::endl;
-            tabelaDeSimbolos[token]=lc;
-            lc++;
+            if(validaRegraLabel(token,instructionSet)){
+                std::cout << token << std::endl;
+                tabelaDeSimbolos[token]=lc;
+                lc++;
+            }else{
+                std::cout << "ERRO LEXICO: erro na declaracao da label: '" << token << "'"<<std::endl;
+                exit(0);
+            }
         }
     }
 
@@ -161,7 +189,13 @@ int main() {
 
         while (iss >> token) {
             if(token.find(":") != std::string::npos){ //eh label
-                iss>>token;
+                if(validaRegraLabel(token,instructionSet)){
+                    iss>>token;
+                }
+                else{
+                    std::cout << "ERRO LEXICO: erro na declaracao da label: '" << token << "'"<<std::endl;
+                    exit(0);
+                }
             }
             code = getInstructionValue(token,instructionMap);
             if(code == 9){
