@@ -294,10 +294,6 @@ int main() {
 
     }
 
-    if(comprometido){
-        exit(0);
-    }
-
     std::vector<std::string> tokens_data;
     // std::cout << "Linhas da SECAO DATA:" << std::endl;
     int idx = 0;
@@ -360,7 +356,7 @@ int main() {
                                         std::cout<<"ERRO na linha " << countDataLines<< " : "  << line << std::endl;
 
                     std::cout<<"ERRO SEMANTICO: Declaracao de label duplicada: "<<label << std::endl; 
-                    exit(0);
+                    comprometido=true;
                 }
                 iss>>token;
                 tabelaDeSimbolos[label]=lc;
@@ -383,7 +379,7 @@ int main() {
             if(tabelaDeSimbolos.find(token) != tabelaDeSimbolos.end()){
                 std::cout<<"ERRO na linha " << idxData << std::endl;
                 std::cout<<"ERRO SEMANTICO: Declaracao de label duplicada: "<<token << std::endl; 
-                exit(0);
+                comprometido=true;
             }
             tabelaDeSimbolos[token]=lc;
             lc++;
@@ -432,7 +428,7 @@ int main() {
 
                     std::cout<<"ERRO na linha " << countTextLines<< " : "  << line << std::endl;
                     std::cout<<"ERRO SEMANTICO: Declaracao de label duplicada: "<<labelComposto[0] << std::endl; 
-                    exit(0);
+                    comprometido=true;
                 }
 
                 op1=tabelaDeSimbolos[labelComposto[0]+":"];
@@ -447,7 +443,7 @@ int main() {
                     std::cout<<"ERRO na linha " << countTextLines<< " : "  << line << std::endl;
 
                     std::cout<<"ERRO SEMANTICO: Declaracao de label duplicada: "<<labelComposto[0] << std::endl; 
-                    exit(0);
+                    comprometido=true;
                 }
 
 
@@ -472,7 +468,7 @@ int main() {
                                         std::cout<<"ERRO na linha " << countTextLines<< " : "  << line << std::endl;
 
                     std::cout<<"ERRO SEMANTICO: Label não declarada: "<<labelComposto[0] << std::endl; 
-                    exit(0);
+                    comprometido=true;
                 }
 
                 op1=tabelaDeSimbolos[labelComposto[0]+":"];
@@ -493,6 +489,10 @@ int main() {
     for (const auto& par : tabelaDeDados) {
         strObj += std::to_string(par.second) + " ";
         std::cout << "Chave: " << par.first + enderecoDados << ", Valor: " << par.second << std::endl;
+    }
+
+    if(comprometido){
+        exit(0);   
     }
 
     std::cout<<strObj<<std::endl;
