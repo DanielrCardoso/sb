@@ -67,6 +67,21 @@ bool contemApenasNumeros(const std::string& str) {
     return true;
 }
 
+
+bool contemApenasNumerosComSinal(const std::string& str) {
+    size_t inicio = 0;
+    if (str[0] == '-' || str[0] == '+') {
+        inicio = 1;
+    }
+    for (size_t i = inicio; i < str.length(); i++) {
+        if (!std::isdigit(str[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool analisadorSintaticoSecData(std::string line,std::set<std::string> instructionSet,std::set<std::string> directiveSet){
     std::istringstream iss(line);
     std::string token;
@@ -75,6 +90,7 @@ bool analisadorSintaticoSecData(std::string line,std::set<std::string> instructi
     iss >> token;
     int quantidadeArgs = splitString(line," ").size();
     quantidadeArgs--;
+    bool isConst = false;
 
     if(!isInstruction(token,instructionSet)){ // eh simbolo
         if(token.find(":") != std::string::npos){ //eh label
@@ -100,6 +116,7 @@ bool analisadorSintaticoSecData(std::string line,std::set<std::string> instructi
     // std::cout<<"fora dos args: "<< token << std::endl;
 
     if(token == "CONST"){
+        isConst = true;
         quantidadeArgs--;
 
         // std::cout<< line << " " << quantidadeArgs << std::endl;
@@ -121,7 +138,10 @@ bool analisadorSintaticoSecData(std::string line,std::set<std::string> instructi
 
     iss >> token;
 
-    if(quantidadeArgs>0 && !contemApenasNumeros(token)){
+    if(!isConst && quantidadeArgs>0 && !contemApenasNumeros(token)){
+        std::cout << "ERRO SINTATICO: argumento invalido." <<std::endl;
+        return false;
+    }else if(isConst && quantidadeArgs>0 && !contemApenasNumerosComSinal(token)){
         std::cout << "ERRO SINTATICO: argumento invalido." <<std::endl;
         return false;
     }
@@ -469,11 +489,11 @@ int main() {
         // std::cout<<strObj<<std::endl;
     }
 
-    // std::cout<<"----tabela de dados----"<<std::endl;
-    // for (const auto& par : tabelaDeDados) {
-    //     strObj += std::to_string(par.second) + " ";
-    //     std::cout << "Chave: " << par.first + enderecoDados << ", Valor: " << par.second << std::endl;
-    // }
+    std::cout<<"----tabela de dados----"<<std::endl;
+    for (const auto& par : tabelaDeDados) {
+        strObj += std::to_string(par.second) + " ";
+        std::cout << "Chave: " << par.first + enderecoDados << ", Valor: " << par.second << std::endl;
+    }
 
     std::cout<<strObj<<std::endl;
 
