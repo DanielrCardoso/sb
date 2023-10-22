@@ -121,8 +121,7 @@ bool analisadorSintaticoSecData(std::string line,std::set<std::string> instructi
 
     iss >> token;
 
-    
-    if(!contemApenasNumeros(token)){
+    if(quantidadeArgs>0 && !contemApenasNumeros(token)){
         std::cout << "ERRO SINTATICO: argumento invalido." <<std::endl;
         return false;
     }
