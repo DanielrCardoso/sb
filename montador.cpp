@@ -65,58 +65,70 @@ bool analisadorSintatico(std::string line,std::set<std::string> instructionSet){
 
     iss >> token;
 
+    int quantidadeArgs = splitString(line,", ").size();
     if(!isInstruction(token,instructionSet)){ // eh simbolo
+        quantidadeArgs--;
         if(token.find(":") != std::string::npos){ //eh label
             if(!analisadorLexico(token,instructionSet)){
                 std::cout << "ERRO LEXICO: erro na declaracao da label: '" << token << "'"<<std::endl;
-                exit(0);
+                return false;
             }
             iss >> token;
         }else{
             std::cout << "ERRO SINTATICO: erro no token: '" << token << "'"<<std::endl;
-            exit(0);
+            return false;
         }
     }
 
     if(!isInstruction(token,instructionSet)){
         std::cout << "ERRO SINTATICO: A instrucao: '" << token << "' nao esta definida na tabela de diretivas da ilnguagem."<<std::endl;
-        exit(0);
+        return false;
     }
 
     if(token != "STOP"){
 
         iss >> parametro;
 
-        std::cout<< "OP "<< token << " param "<< parametro << std::endl;
+        // std::cout<< "OP "<< token << " param "<< parametro << std::endl;
 
         if(token != "COPY"){
+
+            if(quantidadeArgs != 2){
+                std::cout << "ERRO SINTATICO: A instrucao deve ter UM argumento."<<std::endl;
+                return false;
+            }
             // return true;
             if(!analisadorLabels(parametro,instructionSet)){
                 std::cout << "ERRO SINTATICO: Os parametros da funcao nao seguem as regras de declaracao."<<std::endl;
-                exit(0);           
+                return false;           
             }
 
         }
         else{
-        std::vector<std::string> operandos = splitString(parametro,",");
-        if(operandos.size()<2){
-                std::cout << "ERRO SINTATICO: A instrucao COPY deve receber dois parametros."<<std::endl;
-                exit(0);
-        }
-        for(auto x : operandos){
-                if(std::regex_search(x, espacoRegex)){
-                    std::cout << "ERRO SINTATICO: Os parametros da funcao COPY nao devem conter espacos."<<std::endl;
-                    exit(0);
-                }
+            std::vector<std::string> operandos = splitString(parametro,",");
+            if(operandos.size()!=2){
+                    std::cout << "ERRO SINTATICO: A instrucao COPY deve receber dois parametros."<<std::endl;
+                    return false;
+            }
+            for(auto x : operandos){
+                    if(std::regex_search(x, espacoRegex)){
+                        std::cout << "ERRO SINTATICO: Os parametros da funcao COPY nao devem conter espacos."<<std::endl;
+                        return false;
+                    }
 
-                if(!analisadorLabels(x,instructionSet)){
-                    std::cout << "ERRO SINTATICO: Os parametros da funcao COPY nao seguem as regras de declaracao."<<std::endl;
-                    exit(0);
-                }
+                    if(!analisadorLabels(x,instructionSet)){
+                        std::cout << "ERRO SINTATICO: Os parametros da funcao COPY nao seguem as regras de declaracao."<<std::endl;
+                        return false;
+                    }
 
-        }
+            }
         }
 
+    }else{
+        if(quantidadeArgs > 1){
+            std::cout << "ERRO SINTATICO: STOP não deve ter argumentos."<<std::endl;
+            return false;
+        }
     }
 
     return true;
@@ -158,8 +170,10 @@ int main() {
     bool in_text_section = false;
 
     std::string linha;
+    int numerolinha = 0;
     // Leitura do arquivo de entrada e separação das linhas em seções.
     for (const std::string& linha : assemblyLines) {
+        numerolinha ++;
         if (linha.find("SECAO DATA") != std::string::npos) {
             in_data_section = true;
             in_text_section = false;
@@ -173,9 +187,13 @@ int main() {
         if (in_data_section) {
             data_section_lines.push_back(linha);
         } else if (in_text_section) {
-            analisadorSintatico(linha,instructionSet);
+            if(!analisadorSintatico(linha,instructionSet)){
+                std::cout << "ERRO na linha "<< numerolinha << ": " << linha << std::endl;
+                exit(0);
+            }
             text_section_lines.push_back(linha);
         }
+
     }
 
     std::vector<std::string> tokens_data;
