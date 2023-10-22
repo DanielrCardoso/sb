@@ -1,0 +1,15 @@
+# Arquivos gerados pelo CMake
+/build/
+/CMakeCache.txt
+/CMakeFiles/
+/CMakeScripts/
+/CMakeTmp/
+/cmake_install.cmake
+/Makefile
+
+# Arquivos de biblioteca estática (.a)
+*.a
+
+# Arquivos e diretórios de compilação
+/bin/
+/lib/

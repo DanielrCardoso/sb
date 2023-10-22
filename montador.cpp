@@ -6,77 +6,8 @@
 #include <set>
 #include <map>
 
-bool isInstruction(const std::string& token, const std::set<std::string>& instructionSet) {
-    return instructionSet.find(token) != instructionSet.end();
-}
-
-bool isDirective(const std::string& token, const std::set<std::string>& directiveSet) {
-    return directiveSet.find(token) != directiveSet.end();
-}
-
-int getTamanhoInstrucao(const std::string& instrucao){
-    if(instrucao == "COPY"){
-        return 3;
-    }else if(instrucao == "STOP"){
-        return 1;
-    }else{
-        return 2;
-    }
-}
-
-int getInstructionValue(const std::string& instruction, const std::map<std::string, int>& instructionMap) {
-    auto it = instructionMap.find(instruction);
-    if (it != instructionMap.end()) {
-        return it->second;
-    } else {
-        return -1;
-    }
-}
-
-// Função para dividir uma string com base em espaços e vírgulas
-std::vector<std::string> splitString(const std::string& input) {
-    std::vector<std::string> tokens;
-    std::string token;
-    
-    for (char c : input) {
-        if (c == ' ' || c == ',') {
-            if (!token.empty()) {
-                tokens.push_back(token);
-                token.clear();
-            }
-        } else {
-            token += c;
-        }
-    }
-    
-    if (!token.empty()) {
-        tokens.push_back(token);
-    }
-    
-    return tokens;
-}
-
-std::vector<std::string> splitStringAdd(const std::string& input) {
-    std::vector<std::string> tokens;
-    std::string token;
-    
-    for (char c : input) {
-        if (c == '+') {
-            if (!token.empty()) {
-                tokens.push_back(token);
-                token.clear();
-            }
-        } else {
-            token += c;
-        }
-    }
-    
-    if (!token.empty()) {
-        tokens.push_back(token);
-    }
-    
-    return tokens;
-}
+#include "InstructionsUtils.h"
+#include "StringFilesUtils.h"
 
 int main() {
     std::set<std::string> instructionSet = {"CONST","SPACE","LOAD", "STORE", "ADD", "SUB", "MUL", "DIV", "INPUT", "OUTPUT", "JMPP", "JMPZ", "STOP","COPY"};
@@ -103,12 +34,9 @@ int main() {
 
     std::map<std::string,int> tabelaDeSimbolos;
 
-    std::ifstream arquivo_asm("bin.asm");
-    if (!arquivo_asm.is_open()) {
-        std::cerr << "Erro ao abrir o arquivo ASM." << std::endl;
-        return 1;
-    }
+    std::vector<std::string> assemblyLines = readFile("bin.asm");
 
+    // Vetores para armazenar linhas da seção DATA e da seção TEXT.
     std::vector<std::string> data_section_lines;
     std::vector<std::string> text_section_lines;
 
@@ -116,7 +44,8 @@ int main() {
     bool in_text_section = false;
 
     std::string linha;
-    while (std::getline(arquivo_asm, linha)) {
+    // Leitura do arquivo de entrada e separação das linhas em seções.
+    for (const std::string& linha : assemblyLines) {
         if (linha.find("SECAO DATA") != std::string::npos) {
             in_data_section = true;
             in_text_section = false;
@@ -133,8 +62,6 @@ int main() {
             text_section_lines.push_back(linha);
         }
     }
-
-    arquivo_asm.close();
 
     std::vector<std::string> tokens_data;
     std::cout << "Linhas da SECAO DATA:" << std::endl;
@@ -160,7 +87,7 @@ int main() {
             idx +=1;
         }
         else if(token.compare("SPACE") == 0){
-            std::vector<std::string> teste = splitString(line);
+            std::vector<std::string> teste = splitString(line," ,");
 
             std::cout<<"teste "<< teste.size() <<std::endl;
 
@@ -177,11 +104,9 @@ int main() {
         
     }
 
-
     for (const auto& par : tabelaDeSimbolos) {
         std::cout << "Chave: " << par.first << ", Valor: " << par.second << std::endl;
     }
-
 
     std::vector<std::string> tokens_text;
     std::cout << "\nLinhas da SECAO TEXT:" << std::endl;
@@ -241,15 +166,15 @@ int main() {
             code = getInstructionValue(token,instructionMap);
             if(code == 9){
                 iss>>token;
-                operandosCopy = splitString(token);
+                operandosCopy = splitString(token," ,");
 
-                labelComposto = splitStringAdd(operandosCopy[0]);
+                labelComposto = splitString(operandosCopy[0],"+");
                 op1=tabelaDeSimbolos[labelComposto[0]+":"];
                 if(labelComposto.size()>1){
                     op1+= std::stoi(labelComposto[1]);
                 }
 
-                labelComposto = splitStringAdd(operandosCopy[1]);
+                labelComposto = splitString(operandosCopy[1],"+");
                 op2=tabelaDeSimbolos[labelComposto[0]+":"];
                 if(labelComposto.size()>1){
                     op2+= std::stoi(labelComposto[1]);
@@ -261,7 +186,7 @@ int main() {
             }else{
                 iss>>token;
 
-                labelComposto = splitStringAdd(token);
+                labelComposto = splitString(token,"+");
 
                 op1=tabelaDeSimbolos[labelComposto[0]+":"];
 
@@ -277,7 +202,6 @@ int main() {
         // std::cout<<strObj<<std::endl;
     }
 
-
     std::cout<<"----tabela de dados----"<<std::endl;
     for (const auto& par : tabelaDeDados) {
         strObj += std::to_string(par.second) + " ";
@@ -286,14 +210,6 @@ int main() {
 
     std::cout<<strObj<<std::endl;
 
-
     return 0;
 }
 
-
-//le linha 
-// verifica se é secao text
-// enquanto não for
-// armazenar linha em um vetor de strings para secao data
-
-//quando achar secao text armazenar string em um vetor para secao text
