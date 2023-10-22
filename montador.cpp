@@ -11,11 +11,8 @@
 #include "InstructionsUtils.h"
 #include "StringFilesUtils.h"
 
-bool isLetterOrUnderscore(char c) {
-    return isalpha(c) || c == '_';
-}
-
 std::regex espacoRegex("\\s");
+
 
 bool analisadorLexico(std::string token,std::set<std::string> instructionSet){
 
@@ -53,30 +50,6 @@ bool analisadorLabels(const std::string& token, const std::set<std::string>& ins
     } else {
         // Se não houver um "+", verificamos a string inteira da mesma maneira
         if (!isLetterOrUnderscore(token[0]) || isInstruction(token, instructionSet)) return false;
-    }
-
-    return true;
-}
-
-bool contemApenasNumeros(const std::string& str) {
-    for (char caractere : str) {
-        if (!std::isdigit(caractere)) {
-            return false;
-        }
-    }
-    return true;
-}
-
-
-bool contemApenasNumerosComSinal(const std::string& str) {
-    size_t inicio = 0;
-    if (str[0] == '-' || str[0] == '+') {
-        inicio = 1;
-    }
-    for (size_t i = inicio; i < str.length(); i++) {
-        if (!std::isdigit(str[i])) {
-            return false;
-        }
     }
 
     return true;
@@ -227,43 +200,18 @@ bool analisadorSintaticoSecText(std::string line,std::set<std::string> instructi
     
 }
 
-int main() {
-    std::set<std::string> instructionSet = {"CONST","SPACE","LOAD", "STORE", "ADD", "SUB", "MUL", "DIV", "INPUT", "OUTPUT", "JMPP", "JMPZ", "STOP","COPY"};
-    std::set<std::string> directiveSet = {"CONST","SPACE"};
-    std::map<std::string, int> instructionMap;
-    std::map<int, int> tabelaDeDados;
-    int code;
-    int lc = 0;
-
-    instructionMap["ADD"] = 1;
-    instructionMap["SUB"] = 2;
-    instructionMap["MUL"] = 3;
-    instructionMap["DIV"] = 4;
-    instructionMap["JMP"] = 5;
-    instructionMap["JMPN"] = 6;
-    instructionMap["JMPP"] = 7;
-    instructionMap["JMPZ"] = 8;
-    instructionMap["COPY"] = 9;
-    instructionMap["LOAD"] = 10;
-    instructionMap["STORE"] = 11;
-    instructionMap["INPUT"] = 12;
-    instructionMap["OUTPUT"] = 13;
-    instructionMap["STOP"] = 14;
-
-    std::map<std::string,int> tabelaDeSimbolos;
-
-    std::vector<std::string> assemblyLines = readFile("bin.asm");
+std::tuple<std::vector<std::string>, std::vector<std::string>, bool> makeDataAndText(std::vector<std::string> assemblyLines,std::set<std::string> instructionSet,std::set<std::string> directiveSet){
+    std::string linha;
+    int numerolinha = 0;
+    bool in_data_section = false;
+    bool in_text_section = false;
+    bool comprometido = false;
 
     // Vetores para armazenar linhas da seção DATA e da seção TEXT.
     std::vector<std::string> data_section_lines;
     std::vector<std::string> text_section_lines;
 
-    bool in_data_section = false;
-    bool in_text_section = false;
 
-    std::string linha;
-    int numerolinha = 0;
-    bool comprometido = false;
     // Leitura do arquivo de entrada e separação das linhas em seções.
     for (const std::string& linha : assemblyLines) {
         numerolinha ++;
@@ -294,7 +242,14 @@ int main() {
 
     }
 
+
+    return std::make_tuple(data_section_lines,text_section_lines,comprometido);
+
+}
+
+std::tuple<std::map<int, int>, std::vector<std::string>> criaTabelaDeDados(std::vector<std::string> data_section_lines){
     std::vector<std::string> tokens_data;
+    std::map<int, int> tabelaDeDados;
     // std::cout << "Linhas da SECAO DATA:" << std::endl;
     int idx = 0;
     for (const std::string& line : data_section_lines) {
@@ -331,15 +286,17 @@ int main() {
 
             tabelaDeDados[idx]=0;
             idx +=1;
-        }
-        
+        } 
     }
 
-    // for (const auto& par : tabelaDeSimbolos) {
-    //     std::cout << "Chave: " << par.first << ", Valor: " << par.second << std::endl;
-    // }
+    return std::make_tuple(tabelaDeDados,tokens_data);
+}
 
-    std::vector<std::string> tokens_text;
+std::tuple<std::map<std::string,int>,int,bool> criaTabelaSimbolosSecText(std::vector<std::string> text_section_lines){
+    std::map<std::string,int> tabelaDeSimbolos;
+    int lc = 0;
+    bool comprometido = false;
+
     int countDataLines = 1;
     // std::cout << "\nLinhas da SECAO TEXT:" << std::endl;
     for (const std::string& line : text_section_lines) {
@@ -369,8 +326,12 @@ int main() {
         }
     }
 
+    return std::make_tuple(tabelaDeSimbolos,lc,comprometido);
+}
+
+std::tuple<std::map<std::string,int>,int,bool> atualizaTabelaDeSimbolosSecData(std::vector<std::string> tokens_data,std::map<std::string,int> tabelaDeSimbolos,int lc,std::set<std::string> instructionSet){
     int idxData = 1;
-    int enderecoDados = lc;
+    bool comprometido = false;
     // std::cout << "-----TOKENS-----" << std::endl;
     for (const std::string& token : tokens_data) {
         idxData++;
@@ -385,19 +346,32 @@ int main() {
             lc++;
         }
     }
+    return std::make_tuple(tabelaDeSimbolos,lc,comprometido);
+}
 
-    // std::cout<<"----tabela de simbolos----"<<std::endl;
-    // for (const auto& par : tabelaDeSimbolos) {
-    //     std::cout << "Chave: " << par.first << ", Valor: " << par.second << std::endl;
-    // }
-
+std::string geraCodigoObjeto(std::vector<std::string> text_section_lines,std::map<std::string,int> tabelaDeSimbolos,std::map<int, int> tabelaDeDados){
+    std::map<std::string, int> instructionMap;
+        instructionMap["ADD"] = 1;
+        instructionMap["SUB"] = 2;
+        instructionMap["MUL"] = 3;
+        instructionMap["DIV"] = 4;
+        instructionMap["JMP"] = 5;
+        instructionMap["JMPN"] = 6;
+        instructionMap["JMPP"] = 7;
+        instructionMap["JMPZ"] = 8;
+        instructionMap["COPY"] = 9;
+        instructionMap["LOAD"] = 10;
+        instructionMap["STORE"] = 11;
+        instructionMap["INPUT"] = 12;
+        instructionMap["OUTPUT"] = 13;
+        instructionMap["STOP"] = 14;
+    
+    bool comprometido = false;
     std::string strObj = "";
     int op1 =0;
     int op2 = 0;
+    int code;
     std::vector<std::string> operandosCopy;
-
-
-    // std::cout<<"----cod obj----"<<std::endl;
 
     int countTextLines = 1;
     for (const std::string& line : text_section_lines) {
@@ -413,18 +387,13 @@ int main() {
             }
             code = getInstructionValue(token,instructionMap);
             if(code == 9){
-                std::cout<<"entrou no copy"<<std::endl;
-
                 iss>>token;
                 operandosCopy = splitString(token," ,");
 
                 labelComposto = splitString(operandosCopy[0],"+");
 
-                // std::cout<<labelComposto[1]<<std::endl;
-
-
                 if(!(tabelaDeSimbolos.find(labelComposto[0]+':') != tabelaDeSimbolos.end())){
-                                    std::cout<<labelComposto[0]<<std::endl;
+                    std::cout<<labelComposto[0]<<std::endl;
 
                     std::cout<<"ERRO na linha " << countTextLines<< " : "  << line << std::endl;
                     std::cout<<"ERRO SEMANTICO: Declaracao de label duplicada: "<<labelComposto[0] << std::endl; 
@@ -439,7 +408,7 @@ int main() {
                 labelComposto = splitString(operandosCopy[1],"+");
 
                 if(!(tabelaDeSimbolos.find(labelComposto[0]+':') != tabelaDeSimbolos.end())){
-                                    std::cout<<labelComposto[0]<<std::endl;
+                    std::cout<<labelComposto[0]<<std::endl;
                     std::cout<<"ERRO na linha " << countTextLines<< " : "  << line << std::endl;
 
                     std::cout<<"ERRO SEMANTICO: Declaracao de label duplicada: "<<labelComposto[0] << std::endl; 
@@ -453,20 +422,14 @@ int main() {
                 }
 
                 strObj += std::to_string(code) + " " + std::to_string(op1) + " " + std::to_string(op2) + " ";
-            }else if(code == 14){
-                                std::cout<<"entrou no stop"<<std::endl;
-
-                strObj += std::to_string(code) + " ";
-            }else{
-                                std::cout<<"entrou no geral " << code <<std::endl;
-
-                iss>>token;
-
-                labelComposto = splitString(token,"+");
+                }else if(code == 14){
+                    strObj += std::to_string(code) + " ";
+                }else{
+                    iss>>token;
+                    labelComposto = splitString(token,"+");
 
                 if(!(tabelaDeSimbolos.find(labelComposto[0]+':') != tabelaDeSimbolos.end())){
-                                        std::cout<<"ERRO na linha " << countTextLines<< " : "  << line << std::endl;
-
+                    std::cout<<"ERRO na linha " << countTextLines<< " : "  << line << std::endl;
                     std::cout<<"ERRO SEMANTICO: Label não declarada: "<<labelComposto[0] << std::endl; 
                     comprometido=true;
                 }
@@ -481,19 +444,57 @@ int main() {
             }
             break;
         }
-
-        // std::cout<<strObj<<std::endl;
     }
 
-    std::cout<<"----tabela de dados----"<<std::endl;
-    for (const auto& par : tabelaDeDados) {
+    for (const auto& par : tabelaDeDados){
         strObj += std::to_string(par.second) + " ";
-        std::cout << "Chave: " << par.first + enderecoDados << ", Valor: " << par.second << std::endl;
     }
 
+    return strObj;
+
+}
+
+void finaliza(bool comprometido){
     if(comprometido){
         exit(0);   
     }
+}
+int main() {
+    std::set<std::string> instructionSet = {"CONST","SPACE","LOAD", "STORE", "ADD", "SUB", "MUL", "DIV", "INPUT", "OUTPUT", "JMPP", "JMPZ", "STOP","COPY"};
+    std::set<std::string> directiveSet = {"CONST","SPACE"};
+    
+    //Le o arquivo indicado e armazena cada linha em um vetor de strings.
+    std::vector<std::string> assemblyLines = readFile("bin.asm");
+
+    //Constroi e armazena as secoes DATA e TEXT.
+    std::tuple<std::vector<std::string>, std::vector<std::string>, bool> resultado = makeDataAndText(assemblyLines,instructionSet,directiveSet);
+    std::vector<std::string> data_section_lines = std::get<0>(resultado);
+    std::vector<std::string> text_section_lines = std::get<1>(resultado);
+    bool comprometido = std::get<2>(resultado); //caso exista um erro impede a criacao do arquivo objeto.
+
+
+    //Constroi a tabela de dados e uma estrutura auxiilar com os tokens da secap DATA.
+    std::tuple<std::map<int, int>, std::vector<std::string>> dataResult = criaTabelaDeDados(data_section_lines);
+    std::map<int, int> tabelaDeDados = std::get<0>(dataResult);
+    std::vector<std::string> tokens_data = std::get<1>(dataResult);
+
+    //Constroi a tabela de simbolos com os dados da secao TEXT, alem de criar a variavel Line Count(LC)
+    std::tuple<std::map<std::string,int>,int,bool> tableSimbResul = criaTabelaSimbolosSecText(text_section_lines);
+    std::map<std::string,int> tabelaDeSimbolos = std::get<0>(tableSimbResul);
+    int lc = std::get<1>(tableSimbResul);
+    comprometido =std::get<2>(tableSimbResul);
+
+    int enderecoDados = lc; // salva o valor de LC para usar como contador de linhas de DATA(sera utilizado para informar a linha do erro)
+    
+    //atualiza a tabela de simbolos com as informacoes da secao DATA.
+    std::tuple<std::map<std::string,int>,int,bool> tableSimbResulData = atualizaTabelaDeSimbolosSecData(tokens_data,tabelaDeSimbolos,lc,instructionSet);
+    tabelaDeSimbolos = std::get<0>(tableSimbResulData);
+    lc = std::get<1>(tableSimbResulData);
+    comprometido =std::get<2>(tableSimbResulData);
+
+    finaliza(comprometido);
+
+    std::string strObj = geraCodigoObjeto(text_section_lines,tabelaDeSimbolos,tabelaDeDados);
 
     std::cout<<strObj<<std::endl;
 

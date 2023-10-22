@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 
+
 std::vector<std::string> splitString(const std::string& input, const std::string& delimiters) {
     std::vector<std::string> tokens;
     size_t pos = 0;
@@ -34,6 +35,33 @@ std::vector<std::string> readFile(const std::string& filename) {
     arquivo_asm.close();
 
     return lines;
+}
+
+bool contemApenasNumeros(const std::string& str) {
+    for (char caractere : str) {
+        if (!std::isdigit(caractere)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool contemApenasNumerosComSinal(const std::string& str) {
+    size_t inicio = 0;
+    if (str[0] == '-' || str[0] == '+') {
+        inicio = 1;
+    }
+    for (size_t i = inicio; i < str.length(); i++) {
+        if (!std::isdigit(str[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool isLetterOrUnderscore(char c) {
+    return isalpha(c) || c == '_';
 }
 
 
